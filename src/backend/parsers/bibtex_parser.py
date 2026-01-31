@@ -243,17 +243,25 @@ class BibTeXParser:
                 publications, total, duplicates = self.parse_bib_file(str(bib_file))
                 
                 # Extract PID from filename (e.g., "94_4013.bib" -> "94/4013")
+                # Or "01_1744-1_alok.bib" -> "01/1744-1"
                 filename = bib_file.stem  # Get filename without .bib extension
-                # Remove trailing _1, _2 from duplicate files (but not part of PID like _1571)
-                # Check if last part after underscore is a single digit (duplicate marker)
-                parts = filename.rsplit('_', 1)
-                if len(parts) == 2 and parts[1].isdigit() and len(parts[1]) == 1:
-                    # This is a duplicate marker like _1, _2
-                    base_filename = parts[0]
-                else:
-                    # This is part of the PID like _1571
-                    base_filename = filename
                 
+                # Remove faculty name suffix (e.g., "_alok", "_udgata") if present
+                # Faculty names are typically alphabetic suffixes after the PID
+                parts = filename.split('_')
+                if len(parts) >= 3:  # e.g., ["01", "1744-1", "alok"]
+                    # Check if last part is alphabetic (faculty name)
+                    if parts[-1].replace('-', '').isalpha():
+                        # Remove the faculty name suffix
+                        parts = parts[:-1]
+                
+                # Check if last part is a single digit (duplicate marker like _1, _2)
+                if len(parts) >= 2 and parts[-1].isdigit() and len(parts[-1]) == 1:
+                    # Remove duplicate marker
+                    parts = parts[:-1]
+                
+                # Reconstruct PID: "01_1744-1" -> "01/1744-1"
+                base_filename = '_'.join(parts)
                 source_pid = base_filename.replace('_', '/', 1)  # Replace first underscore with /
                 
                 # Add or update publications with source PID tracking

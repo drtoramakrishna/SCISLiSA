@@ -74,9 +74,12 @@ def main():
     db = SessionLocal()
     service = DatabaseIngestionService(db)
     
-    # Load faculty mapping
-    faculty_map_full = service.load_faculty_mapping('references/dblp/faculty_dblp_matched.json')
-    faculty_map = faculty_map_full['by_name']
+    # Load faculty mapping from SSOT
+    import os
+    current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    faculty_json = os.path.join(current_dir, 'references', 'faculty_data.json')
+    faculty_map_full = service.load_faculty_mapping(faculty_json)
+    faculty_map = faculty_map_full['by_pid']
     
     print("\n" + "=" * 120)
     print(" " * 40 + "DBLP PUBLICATION COUNT VERIFICATION")
@@ -88,8 +91,8 @@ def main():
     total_matches = 0
     total_mismatches = 0
     
-    for name, info in sorted(faculty_map.items()):
-        pid = info.get('dblp_pid')
+    for pid, info in sorted(faculty_map.items(), key=lambda x: x[1].get('faculty_name', '')):
+        name = info.get('faculty_name')
         
         # Get count from our database
         db_count = db.execute(text("""

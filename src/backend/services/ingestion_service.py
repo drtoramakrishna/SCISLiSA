@@ -207,8 +207,7 @@ class DatabaseIngestionService:
                 has_faculty = True
             
             for position, author_name in enumerate(pub_data['authors'], 1):
-                # CORRECTED APPROACH: Only mark an author as faculty if we can match them
-                # by name with a faculty member in this publication's source PIDs
+                # Match author by name using dblp_names from faculty_data.json
                 is_faculty = False
                 dblp_pid = None
                 faculty_data = None
@@ -216,19 +215,18 @@ class DatabaseIngestionService:
                 # Normalize author name for matching
                 normalized_author = self.normalize_name(author_name)
                 
-                # Check each faculty PID in this publication
-                for fac_pid in faculty_pids_in_pub:
-                    fac_info = pid_mapping[fac_pid]
-                    fac_name = fac_info.get('faculty_name', '')
-                    normalized_fac_name = self.normalize_name(fac_name)
+                # Try to match author name against faculty name variations
+                name_mapping = faculty_mapping.get('by_name', {})
+                if normalized_author in name_mapping:
+                    # Found a match! Get the faculty info
+                    faculty_info = name_mapping[normalized_author]
+                    faculty_pid = faculty_info.get('dblp_pid')
                     
-                    # If this author's name matches this faculty member's name,
-                    # assign the faculty data
-                    if normalized_author == normalized_fac_name:
+                    # Verify this faculty member is in this publication's source PIDs
+                    if faculty_pid in faculty_pids_in_pub:
                         is_faculty = True
-                        dblp_pid = fac_pid
-                        faculty_data = fac_info
-                        break  # Found the match, stop checking
+                        dblp_pid = faculty_pid
+                        faculty_data = faculty_info
                 
                 # Get or create author
                 author = self.get_or_create_author(
@@ -350,7 +348,7 @@ class DatabaseIngestionService:
     
     def load_faculty_mapping(self, json_path: str) -> Dict[str, Dict]:
         """
-        Load faculty mapping from JSON file
+        Load faculty mapping from faculty_data.json (SSOT)
         Returns both name-to-data and PID-to-faculty mappings
         """
         with open(json_path, 'r', encoding='utf-8') as f:
@@ -362,7 +360,7 @@ class DatabaseIngestionService:
         for faculty in faculty_list:
             if faculty.get('dblp_matched'):
                 faculty_info = {
-                    'faculty_name': faculty['faculty_name'],
+                    'faculty_name': faculty['name'],  # Changed from 'faculty_name' to 'name'
                     'dblp_pid': faculty.get('dblp_pid'),
                     'email': faculty.get('email'),
                     'phone': faculty.get('phone'),
@@ -370,13 +368,26 @@ class DatabaseIngestionService:
                     'department': faculty.get('department')
                 }
                 
-                name_mapping[faculty['faculty_name']] = faculty_info
+                name_mapping[faculty['name']] = faculty_info
+                
+                # Map ALL dblp_names variations (critical for matching BibTeX author names)
+                dblp_names = faculty.get('dblp_names', [])
+                for name_variation in dblp_names:
+                    if name_variation and name_variation.strip():
+                        normalized = self.normalize_name(name_variation)
+                        name_mapping[normalized] = faculty_info
+                
+                # Also map the primary name
+                primary_normalized = self.normalize_name(faculty['name'])
+                name_mapping[primary_normalized] = faculty_info
                 
                 # Map PID to faculty (handle multiple PIDs per faculty)
                 pid = faculty.get('dblp_pid')
                 if pid:
                     pid_mapping[pid] = faculty_info
         
+        logger.info(f"✓ Loaded {len(pid_mapping)} faculty members from faculty_data.json")
+        logger.info(f"  Created {len(name_mapping)} name variation mappings")
         return {'by_name': name_mapping, 'by_pid': pid_mapping}
     
     def ingest_publications(self, publications: List[Dict], faculty_mapping: Dict[str, Dict]):
@@ -448,10 +459,11 @@ class DatabaseIngestionService:
 def main():
     """Main ingestion process"""
     # Paths
-    current_dir = Path(__file__).parent.parent
-    project_root = current_dir.parent.parent
-    bib_directory = project_root / 'src' / 'dataset' / 'dblp'
-    faculty_json = current_dir / 'references' / 'dblp' / 'faculty_dblp_matched.json'
+    current_dir = Path(__file__).parent.parent  # /src/backend
+    project_root = current_dir.parent.parent  # Go up to project root (SCISLiSA/)
+    bib_directory = project_root / 'dataset' / 'dblp'
+    # Use faculty_data.json as the single source of truth (SSOT)
+    faculty_json = current_dir / 'references' / 'faculty_data.json'
     
     logger.info("="*80)
     logger.info("DBLP DATA INGESTION PROCESS")
