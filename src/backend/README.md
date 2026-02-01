@@ -262,8 +262,8 @@ If validation shows mismatches:
 
 ## Next Steps
 
-- [ ] Build FastAPI REST API
-- [ ] Implement MCP agent with Ollama
+- [x] Build FastAPI REST API
+- [x] Implement MCP agent with Ollama
 - [ ] Create React frontend with D3.js visualizations
 - [ ] Add Google Scholar integration
 - [ ] Implement citation analysis
