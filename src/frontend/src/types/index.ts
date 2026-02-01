@@ -11,6 +11,7 @@ export interface QueryResponse {
   visualization: VisualizationConfig;
   row_count: number;
   confidence: number;
+  suggested_questions?: string[];
 }
 
 export interface VisualizationConfig {
