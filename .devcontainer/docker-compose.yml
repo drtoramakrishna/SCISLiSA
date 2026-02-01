@@ -11,7 +11,6 @@ services:
     network_mode: service:db
     depends_on:
       - db
-      - ollama
 
   db:
     image: postgres:15
@@ -25,16 +24,17 @@ services:
     ports:
       - "5432:5432"
 
-  ollama:
-    image: ollama/ollama:latest
-    restart: unless-stopped
-    volumes:
-      - ollama-data:/root/.ollama
-    ports:
-      - "11434:11434"
-    # Note: Ollama requires significant resources (4GB+ RAM recommended)
-    # For Codespaces, consider using a 4-core or 8-core machine
+  # Ollama service commented out - requires 4GB+ RAM
+  # Uncomment if you need Natural Language Query feature
+  # and are using a 4-core or 8-core Codespace
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ollama-data:/root/.ollama
+  #   ports:
+  #     - "11434:11434"
 
 volumes:
   postgres-data:
-  ollama-data:
+  # ollama-data:

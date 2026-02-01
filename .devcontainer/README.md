@@ -8,14 +8,13 @@ This repository is configured to run seamlessly in GitHub Codespaces with all de
    - Click the green "Code" button on GitHub
    - Select "Codespaces" tab
    - Click "Create codespace on backend"
-   - ⚠️ **Recommended**: Choose a **4-core or 8-core machine** for better Ollama performance
+   - ✅ **Works on free 2-core machine** (Ollama optional)
 
-2. **Wait for Setup**:
+2. **Wait for Setup** (2-3 minutes):
    - The devcontainer will automatically:
      - Install Python and Node.js dependencies
      - Start PostgreSQL database
-     - Start Ollama service
-     - Pull the llama3.2 model (takes 5-10 minutes)
+     - Create environment files
    - Check the terminal for setup progress
 
 3. **Start the Application**:
@@ -44,13 +43,20 @@ This repository is configured to run seamlessly in GitHub Codespaces with all de
 - **Python 3.11** with FastAPI and all backend dependencies
 - **Node.js 20** with Vite and React
 - **PostgreSQL 15** database
-- **Ollama** with llama3.2 model
 - **VS Code Extensions**:
   - Python, Pylance, Debugger
   - ESLint, Prettier
   - Tailwind CSS
   - PostgreSQL SQLTools
   - Docker
+
+## 🎯 Available Features (Without Ollama)
+
+- ✅ **Faculty Dashboard** - View faculty profiles, publications, h-index
+- ✅ **Publications Browser** - Browse, search, and filter publications
+- ✅ **Analytics Dashboard** - Charts and statistics
+- ✅ **Collaboration Networks** - View co-author relationships
+- ⚠️ **Natural Language Query** - Requires Ollama (see optional setup below)
 
 ## 🔧 Configuration
 
@@ -61,38 +67,61 @@ This repository is configured to run seamlessly in GitHub Codespaces with all de
 - User: `scislisa`
 - Password: `scislisa_pass`
 
-### Ollama
+## 🔧 Optional: Enable Natural Language Query (Ollama)
+
+The Natural Language Query feature is **optional** and requires additional resources.
+
+**To enable Ollama**:
+
+1. **Edit `.devcontainer/docker-compose.yml`**:
+   - Uncomment the `ollama` service section
+   - Uncomment `- ollama` in the app's `depends_on`
+   - Uncomment `ollama-data` in volumes
+
+2. **Upgrade Codespace** (if needed):
+   - Requires **4-core or 8-core machine**
+   - Go to Codespace settings → Change machine type
+
+3. **Rebuild Container**:
+   - Press `F1` → "Dev Containers: Rebuild Container"
+   - Wait 5-10 minutes for Ollama model download
+
+4. **Update backend config**:
+   - Uncomment `OLLAMA_URL` in `src/backend/.env`
+
+### Ollama Configuration (when enabled)
 - URL: `http://localhost:11434`
 - Model: `llama3.2`
+- Required RAM: 4GB+
 
 ## ⚠️ Performance Notes
 
-**Ollama Resource Requirements**:
-- Minimum: 4GB RAM
-- Recommended: 8GB+ RAM
-- The free 2-core Codespace may struggle with Ollama
+**Default Setup (2-core)**:
+- ✅ Works perfectly for all features except Natural Language Query
+- ✅ Fast startup (2-3 minutes)
+- ✅ Suitable for development and testing
 
-**If Ollama is too slow**:
+**With Ollama Enabled**:
+- Requires 4-core or 8-core machine
+- Slower startup (5-10 minutes for model download)
+- Higher memory usage (4GB+ RAM)
 
-1. **Upgrade Codespace Machine**:
-   - Click the Codespace name > Change machine type
-   - Select 4-core or 8-core
+**Alternatives to Local Ollama**:
 
-2. **Use Remote Ollama** (Alternative):
+1. **Use Remote Ollama**:
    - Host Ollama on a separate server
-   - Update `OLLAMA_URL` in `.env`
+   - Update `OLLAMA_URL` in `.env` to remote URL
 
-3. **Switch to Cloud API** (Alternative):
+2. **Switch to Cloud API**:
    - Replace Ollama with OpenAI/Anthropic
    - Modify `src/backend/mcp/agent.py`
 
 ## 🐛 Troubleshooting
 
-### Ollama model not downloading
-```bash
-# Manually pull the model
-curl -X POST http://localhost:11434/api/pull -d '{"name": "llama3.2"}'
-```
+### Natural Language Query not working
+- This feature requires Ollama (see Optional Setup section above)
+- Without Ollama, all other features work normally
+- Error message will indicate if Ollama is not available
 
 ### Database connection issues
 ```bash

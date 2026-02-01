@@ -51,20 +51,7 @@ cd /workspaces/SCISLiSA/src/backend
 # python -c "from models.db_models import Base; from config.db_config import engine; Base.metadata.create_all(engine)"
 
 # ============================================
-# 5. Pull Ollama model
-# ============================================
-echo "🤖 Setting up Ollama..."
-# Wait for Ollama service to be ready
-until curl -s http://localhost:11434/api/tags > /dev/null 2>&1; do
-    echo "   Waiting for Ollama service..."
-    sleep 3
-done
-
-echo "📥 Pulling llama3.2 model (this may take several minutes)..."
-curl -X POST http://localhost:11434/api/pull -d '{"name": "llama3.2"}' || echo "⚠️  Failed to pull Ollama model. You may need to do this manually."
-
-# ============================================
-# 6. Create environment files if needed
+# 5. Create environment files if needed
 # ============================================
 echo "📝 Creating environment configuration..."
 cd /workspaces/SCISLiSA/src/backend
@@ -102,8 +89,14 @@ echo "   Frontend: http://localhost:5173"
 echo "   Backend:  http://localhost:8000"
 echo "   API Docs: http://localhost:8000/docs"
 echo ""
-echo "⚠️  Note: Ollama requires 4GB+ RAM. If you encounter issues, consider:"
-echo "   - Using a larger Codespaces machine (4-core or 8-core)"
-echo "   - Using a remote Ollama instance"
-echo "   - Switching to OpenAI/Anthropic API"
+echo "ℹ️  Available Features:"
+echo "   ✅ Faculty Dashboard - View faculty profiles and publications"
+echo "   ✅ Publications - Browse and filter publications"
+echo "   ✅ Analytics - Publication trends and statistics"
+echo "   ⚠️  Natural Language Query - Requires Ollama (not included by default)"
+echo ""
+echo "💡 To enable Natural Language Query:"
+echo "   1. Uncomment Ollama service in .devcontainer/docker-compose.yml"
+echo "   2. Rebuild container (requires 4-core or 8-core Codespace)"
+echo "   3. Update OLLAMA_URL in src/backend/.env"
 echo ""

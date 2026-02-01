@@ -36,8 +36,7 @@
   "forwardPorts": [
     5173,  // Frontend (Vite)
     8000,  // Backend (FastAPI)
-    5432,  // PostgreSQL
-    11434  // Ollama
+    5432   // PostgreSQL
   ],
 
   // Port attributes
@@ -52,10 +51,6 @@
     },
     "5432": {
       "label": "PostgreSQL",
-      "onAutoForward": "silent"
-    },
-    "11434": {
-      "label": "Ollama",
       "onAutoForward": "silent"
     }
   },
