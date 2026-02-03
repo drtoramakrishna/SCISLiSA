@@ -377,6 +377,28 @@ def ingest_data_background(config: IngestionConfig):
                     # Parse BibTeX file
                     publications, _, _ = parser.parse_bib_file(str(bib_file))
                     
+                    # Extract source_pid from filename
+                    # Filename format: XX_YYYY-Z_name.bib -> XX/YYYY-Z
+                    filename = bib_file.stem  # Remove .bib extension
+                    parts = filename.split('_')
+                    
+                    # Remove faculty name suffix if present (alphabetic)
+                    if len(parts) >= 3 and parts[-1].replace('-', '').isalpha():
+                        parts = parts[:-1]
+                    
+                    # Remove duplicate marker if present (single digit)
+                    if len(parts) >= 2 and parts[-1].isdigit() and len(parts[-1]) == 1:
+                        parts = parts[:-1]
+                    
+                    # Reconstruct PID
+                    base_filename = '_'.join(parts)
+                    source_pid = base_filename.replace('_', '/', 1)
+                    
+                    # Add source_pid to each publication
+                    for pub in publications:
+                        pub['source_pid'] = source_pid
+                        pub['source_pids'] = [source_pid]
+                    
                     # Ingest into database
                     service.ingest_publications(publications, faculty_mapping)
                     

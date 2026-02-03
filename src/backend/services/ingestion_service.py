@@ -207,26 +207,32 @@ class DatabaseIngestionService:
                 has_faculty = True
             
             for position, author_name in enumerate(pub_data['authors'], 1):
-                # Match author by name using dblp_names from faculty_data.json
+                # Match author based on PID-based faculty identification
                 is_faculty = False
                 dblp_pid = None
                 faculty_data = None
                 
-                # Normalize author name for matching
-                normalized_author = self.normalize_name(author_name)
+                # Get PID mapping for faculty identification
+                pid_mapping = faculty_mapping.get('by_pid', {})
+                source_pid = pub_data.get('source_pid')
                 
-                # Try to match author name against faculty name variations
-                name_mapping = faculty_mapping.get('by_name', {})
-                if normalized_author in name_mapping:
-                    # Found a match! Get the faculty info
-                    faculty_info = name_mapping[normalized_author]
-                    faculty_pid = faculty_info.get('dblp_pid')
+                # Check if this publication's source_pid matches a faculty member
+                if source_pid and source_pid in pid_mapping:
+                    # This publication comes from a faculty member's DBLP profile
+                    faculty_info = pid_mapping[source_pid]
+                    faculty_dblp_names = faculty_info.get('dblp_names', [])
                     
-                    # Verify this faculty member is in this publication's source PIDs
-                    if faculty_pid in faculty_pids_in_pub:
-                        is_faculty = True
-                        dblp_pid = faculty_pid
-                        faculty_data = faculty_info
+                    # Check if current author matches any of the faculty's name variations
+                    normalized_author = self.normalize_name(author_name)
+                    
+                    for faculty_name_variant in faculty_dblp_names:
+                        if self.normalize_name(faculty_name_variant) == normalized_author:
+                            # Found a match! Mark as faculty
+                            is_faculty = True
+                            dblp_pid = source_pid
+                            faculty_data = faculty_info
+                            logger.debug(f"Matched author '{author_name}' to faculty {faculty_info.get('faculty_name')} via PID {source_pid}")
+                            break
                 
                 # Get or create author
                 author = self.get_or_create_author(
@@ -362,6 +368,7 @@ class DatabaseIngestionService:
                 faculty_info = {
                     'faculty_name': faculty['name'],  # Changed from 'faculty_name' to 'name'
                     'dblp_pid': faculty.get('dblp_pid'),
+                    'dblp_names': faculty.get('dblp_names', []),  # ADD THIS
                     'email': faculty.get('email'),
                     'phone': faculty.get('phone'),
                     'designation': faculty.get('designation'),

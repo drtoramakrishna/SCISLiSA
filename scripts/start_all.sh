@@ -36,20 +36,24 @@ EOF
 echo ""
 echo "🔥 Starting Backend API (Port 8000)..."
 cd /workspaces/SCISLiSA/src/backend
-nohup .venv/bin/python -m uvicorn api.main:app --reload --host 0.0.0.0 --port 8000 > /tmp/backend.log 2>&1 &
+nohup python3 -m uvicorn api.main:app --reload --host 0.0.0.0 --port 8000 > /tmp/backend.log 2>&1 &
 BACKEND_PID=$!
 echo "Backend PID: $BACKEND_PID"
 
 # Wait for backend to start
 echo "⏳ Waiting for backend to start..."
-sleep 3
-if curl -s http://localhost:8000/health > /dev/null; then
+for i in {1..30}; do
+  if curl -s http://localhost:8000/health > /dev/null 2>&1; then
     echo "✅ Backend is running"
-else
+    break
+  fi
+  if [ $i -eq 30 ]; then
     echo "❌ Backend failed to start"
-    cat /tmp/backend.log
+    cat /tmp/backend.log | tail -20
     exit 1
-fi
+  fi
+  sleep 1
+done
 
 # Start Frontend
 echo ""
