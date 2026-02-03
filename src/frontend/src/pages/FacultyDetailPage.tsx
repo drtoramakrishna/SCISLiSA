@@ -94,7 +94,9 @@ export function FacultyDetailPage() {
       );
       const data = await response.json();
       setPublications(data.items);
-      setTotalPages(data.pages);
+      // Calculate total pages from total and page_size
+      const totalPages = Math.ceil(data.total / pageSize);
+      setTotalPages(totalPages);
       setCurrentPage(page);
     } catch (error) {
       console.error('Failed to load publications:', error);
