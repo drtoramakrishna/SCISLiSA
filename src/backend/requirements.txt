@@ -9,13 +9,13 @@ pydantic>=2.7.4,<3.0.0
 pydantic-settings==2.1.0
 
 # Database
-sqlalchemy==2.0.25
-psycopg2-binary==2.9.9
+sqlalchemy>=2.0.36
+psycopg2-binary>=2.9.10
 pymongo==4.6.1
 
-# Data processing
-pandas==2.1.4
-numpy==1.26.3
+# Data processing (Python 3.13 compatible)
+pandas>=2.2.0
+numpy>=1.26.0
 
 # BibTeX parsing
 bibtexparser==1.4.1

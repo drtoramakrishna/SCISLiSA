@@ -135,6 +135,67 @@ class DatabaseIngestionService:
         self.venue_cache[venue_name] = venue
         return venue
     
+    def _update_existing_publication_authors(self, publication: Publication, pub_data: Dict, faculty_mapping: Dict[str, Dict]):
+        """
+        Update an existing publication's author associations
+        This ensures faculty from the current source_pid are properly linked
+        even if the publication was already ingested from another faculty's file
+        """
+        from models.db_models import publication_authors
+        
+        source_pid = pub_data.get('source_pid')
+        pid_mapping = faculty_mapping.get('by_pid', {})
+        
+        # Check if this publication is from a faculty member's DBLP profile
+        if not source_pid or source_pid not in pid_mapping:
+            return
+        
+        faculty_info = pid_mapping[source_pid]
+        faculty_dblp_names = faculty_info.get('dblp_names', [])
+        
+        # Find the faculty member in the author list
+        for author_name in pub_data['authors']:
+            normalized_author = self.normalize_name(author_name)
+            
+            # Check if this author matches the faculty member
+            is_match = False
+            for faculty_name_variant in faculty_dblp_names:
+                if self.normalize_name(faculty_name_variant) == normalized_author:
+                    is_match = True
+                    break
+            
+            if is_match:
+                # Found the faculty member - ensure they're linked to this publication
+                author = self.get_or_create_author(
+                    author_name,
+                    is_faculty=True,
+                    dblp_pid=source_pid,
+                    faculty_data=faculty_info
+                )
+                
+                # Check if association already exists
+                existing_assoc = self.db.query(publication_authors).filter(
+                    publication_authors.c.publication_id == publication.id,
+                    publication_authors.c.author_id == author.id
+                ).first()
+                
+                if not existing_assoc:
+                    # Create the association
+                    self.db.execute(
+                        publication_authors.insert().values(
+                            publication_id=publication.id,
+                            author_id=author.id,
+                            author_position=pub_data['authors'].index(author_name) + 1
+                        )
+                    )
+                    logger.debug(f"Added missing author link: {author_name} -> {publication.title[:50]}")
+                    
+                    # Update publication's has_faculty_author flag
+                    if not publication.has_faculty_author:
+                        publication.has_faculty_author = True
+                
+                break  # Found and processed the faculty member, no need to continue
+    
     def create_publication(self, pub_data: Dict, faculty_mapping: Dict[str, Dict]) -> bool:
         """
         Create publication and associate with authors
@@ -149,6 +210,9 @@ class DatabaseIngestionService:
             ).first()
             
             if existing:
+                # Publication exists, but we still need to check if the current faculty
+                # member (from source_pid) is properly linked to it
+                self._update_existing_publication_authors(existing, pub_data, faculty_mapping)
                 self.stats['publications_skipped'] += 1
                 logger.debug(f"Skipping duplicate publication: {dblp_key}")
                 return False

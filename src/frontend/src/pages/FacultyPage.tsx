@@ -7,7 +7,6 @@ import {
   RefreshCw, 
   Search, 
   Users,
-  Filter,
   SortAsc,
   Loader2,
   AlertCircle
@@ -35,12 +34,21 @@ export function FacultyPage() {
       else setIsLoading(true);
       setError(null);
 
-      const response = await mcpAPI.faculty.list();
+      console.log('Loading faculty data...');
+      const response = await mcpAPI.faculty.list({ page_size: 100 }); // Request all faculty
+      console.log('Faculty API response:', response);
+      console.log('Response data:', response.data);
 
-      setFaculty(response.items || []);
-      setTotalCount(response.total || 0);
+      // Axios wraps the response in a 'data' property
+      const facultyData = response.data;
+      console.log('Faculty items:', facultyData.items);
+      console.log('Total faculty:', facultyData.total);
+
+      setFaculty(facultyData.items || []);
+      setTotalCount(facultyData.total || 0);
     } catch (error: any) {
       console.error('Failed to load faculty:', error);
+      console.error('Error details:', error.response);
       const errorMsg = error?.message || 'Cannot connect to backend server. Make sure the backend is running at http://localhost:8000';
       setError(errorMsg);
       setFaculty([]);
@@ -60,10 +68,11 @@ export function FacultyPage() {
 
     try {
       const response = await mcpAPI.faculty.publications(facultyId);
+      console.log('Publications response for faculty', facultyId, ':', response.data);
 
       setFaculty(prev => prev.map(f =>
         f.id === facultyId
-          ? { ...f, publications: response.items || [], isLoadingPublications: false }
+          ? { ...f, publications: response.data.items || [], isLoadingPublications: false }
           : f
       ));
     } catch (error) {
@@ -80,11 +89,14 @@ export function FacultyPage() {
     loadFaculty();
   }, [sortBy]);
 
-  const filteredFaculty = faculty.filter(f =>
-    f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (f.designation && f.designation.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (f.research_interests && f.research_interests.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  // Filter faculty based on search query (show all if search is empty)
+  const displayedFaculty = searchQuery.trim() 
+    ? faculty.filter(f =>
+        f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (f.designation && f.designation.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (f.research_interests && f.research_interests.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    : faculty; // Show all faculty by default
 
   const sortOptions = [
     { value: 'name', label: 'Name' },
@@ -127,7 +139,7 @@ export function FacultyPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30">
             <CardContent className="p-4 flex items-center gap-3">
               <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg">
@@ -136,17 +148,6 @@ export function FacultyPage() {
               <div>
                 <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">{totalCount}</div>
                 <div className="text-sm text-blue-600 dark:text-blue-300 font-medium">Total Faculty</div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-lg">
-                <Filter className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-purple-700 dark:text-purple-400">{filteredFaculty.length}</div>
-                <div className="text-sm text-purple-600 dark:text-purple-300 font-medium">Filtered Results</div>
               </div>
             </CardContent>
           </Card>
@@ -212,19 +213,21 @@ export function FacultyPage() {
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
         </div>
-      ) : filteredFaculty.length === 0 ? (
+      ) : displayedFaculty.length === 0 ? (
         <Card className="border-l-4 border-l-slate-300">
           <CardContent className="p-12 text-center">
             <Users className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2 text-slate-700 dark:text-slate-300">No faculty found</h3>
+            <h3 className="text-lg font-semibold mb-2 text-slate-700 dark:text-slate-300">
+              {searchQuery ? 'No faculty found' : 'No faculty members'}
+            </h3>
             <p className="text-slate-500 dark:text-slate-400">
-              Try adjusting your search criteria
+              {searchQuery ? 'Try adjusting your search criteria' : 'No faculty data available'}
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-6">
-          {filteredFaculty.map((member) => (
+          {displayedFaculty.map((member) => (
             <FacultyCard
               key={member.id}
               faculty={member}
